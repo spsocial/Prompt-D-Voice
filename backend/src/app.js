@@ -34,8 +34,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: process.env.DATABASE_URL || './database.sqlite',
-  logging: process.env.NODE_ENV === 'development' ? console.log : false,
-  dialectModule: require('better-sqlite3')
+  logging: process.env.NODE_ENV === 'development' ? console.log : false
 });
 
 // Test database connection
