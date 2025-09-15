@@ -15,11 +15,43 @@ app.use(express.json());
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'AIzaSyBvz3MN-FZShNvDfkzhOLvbRpDc6gCCPP0');
 const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
-// Simple database
+// Import fs for file storage
+const fs = require('fs');
+const path = require('path');
+
+// Database file paths
+const dbPath = path.join(__dirname, '..', 'data');
+const usersFile = path.join(dbPath, 'users.json');
+const scriptsFile = path.join(dbPath, 'scripts.json');
+const ttsFile = path.join(dbPath, 'tts.json');
+
+// Create data directory if not exists
+if (!fs.existsSync(dbPath)) {
+  fs.mkdirSync(dbPath, { recursive: true });
+}
+
+// Load or initialize database
+const loadDB = (file, defaultValue) => {
+  try {
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    }
+  } catch (e) {
+    console.log('Creating new database file:', file);
+  }
+  return defaultValue;
+};
+
+// Save database
+const saveDB = (file, data) => {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+};
+
+// Simple database with persistence
 const db = {
-  users: [],
-  scripts: [],
-  ttsHistory: []
+  users: loadDB(usersFile, []),
+  scripts: loadDB(scriptsFile, []),
+  ttsHistory: loadDB(ttsFile, [])
 };
 
 // JWT Secret
@@ -111,6 +143,7 @@ app.post('/api/auth/register', async (req, res) => {
     };
 
     db.users.push(user);
+    saveDB(usersFile, db.users); // Save to file
     const token = generateToken(user.id);
 
     res.json({
@@ -224,9 +257,11 @@ ${productInfo} คือคำตอบที่คุณตามหา!
     };
 
     db.scripts.push(script);
+    saveDB(scriptsFile, db.scripts); // Save scripts
 
     // Deduct credits
     user.credits -= 5;
+    saveDB(usersFile, db.users); // Save updated user credits
 
     res.json({
       message: 'Script generated successfully!',
