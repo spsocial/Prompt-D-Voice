@@ -6,9 +6,10 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node src/simple-app.js",
-    "start:full": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/full-featured-app.js",
+    "start:simple": "node src/simple-app.js",
+    "start:old": "node src/app.js",
+    "dev": "nodemon src/full-featured-app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
