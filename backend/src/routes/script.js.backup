@@ -1,0 +1,129 @@
+const express = require('express');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+module.exports = (sequelize) => {
+  const router = express.Router();
+  const Script = sequelize.models.Script;
+  const Usage = sequelize.models.Usage;
+  const authMiddleware = require('../middleware/auth')(sequelize);
+  const usageLimitsMiddleware = require('../middleware/usageLimits')(sequelize, 'script_generation');
+
+  // Generate script
+  router.post('/generate', authMiddleware, usageLimitsMiddleware, async (req, res) => {
+    try {
+      const { type, productInfo, title, customPrompt } = req.body;
+      const user = req.user;
+
+      if (!user.apiKeys?.geminiKey) {
+        return res.status(400).json({ message: '#82@4H! Gemini API Key C2#1IH2' });
+      }
+
+      if (!type || !productInfo || !title) {
+        return res.status(400).json({ message: '#82#-I-!9%C+I#I'' });
+      }
+
+      const genAI = new GoogleGenerativeAI(user.apiKeys.geminiKey);
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+      let prompt = customPrompt || user.prompts[type] || process.env[`DEFAULT_${type.toUpperCase()}_PROMPT`];
+      prompt = prompt.replace('{topic}', productInfo);
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const scriptContent = response.text();
+
+      const script = await Script.create({
+        UserId: user.id,
+        title,
+        type,
+        productInfo,
+        content: scriptContent,
+        metadata: {
+          wordCount: scriptContent.split(' ').length,
+          estimatedDuration: Math.ceil(scriptContent.length / 150),
+          language: 'th'
+        }
+      });
+
+      // Update usage
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      await Usage.increment('count', {
+        where: {
+          UserId: user.id,
+          type: 'script_generation',
+          month: currentMonth
+        }
+      });
+
+      res.status(201).json({
+        message: '*#I2*#4L*3@#G',
+        script
+      });
+    } catch (error) {
+      console.error('Script generation error:', error);
+      res.status(500).json({ 
+        message: '@4I-4%2C2#*#I2*#4L',
+        error: error.message 
+      });
+    }
+  });
+
+  // Get all scripts
+  router.get('/list', authMiddleware, async (req, res) => {
+    try {
+      const scripts = await Script.findAll({
+        where: { UserId: req.userId },
+        order: [['createdAt', 'DESC']]
+      });
+
+      res.json({ scripts });
+    } catch (error) {
+      console.error('Get scripts error:', error);
+      res.status(500).json({ message: '@4I-4%2C2#6I-!9%*#4L' });
+    }
+  });
+
+  // Get single script
+  router.get('/:id', authMiddleware, async (req, res) => {
+    try {
+      const script = await Script.findOne({
+        where: {
+          id: req.params.id,
+          UserId: req.userId
+        }
+      });
+
+      if (!script) {
+        return res.status(404).json({ message: 'D!H*#4L' });
+      }
+
+      res.json({ script });
+    } catch (error) {
+      console.error('Get script error:', error);
+      res.status(500).json({ message: '@4I-4%2C2#6I-!9%*#4L' });
+    }
+  });
+
+  // Delete script
+  router.delete('/:id', authMiddleware, async (req, res) => {
+    try {
+      const result = await Script.destroy({
+        where: {
+          id: req.params.id,
+          UserId: req.userId
+        }
+      });
+
+      if (result === 0) {
+        return res.status(404).json({ message: 'D!H*#4L' });
+      }
+
+      res.json({ message: '%*#4L*3@#G' });
+    } catch (error) {
+      console.error('Delete script error:', error);
+      res.status(500).json({ message: '@4I-4%2C2#%*#4L' });
+    }
+  });
+
+  return router;
+};

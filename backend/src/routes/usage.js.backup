@@ -1,0 +1,99 @@
+const express = require('express');
+
+module.exports = (sequelize) => {
+  const router = express.Router();
+  const Usage = sequelize.models.Usage;
+  const authMiddleware = require('../middleware/auth')(sequelize);
+
+  // Get current month usage
+  router.get('/current', authMiddleware, async (req, res) => {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const user = req.user;
+      
+      const scriptUsage = await Usage.findOne({
+        where: {
+          UserId: user.id,
+          type: 'script_generation',
+          month: currentMonth
+        }
+      });
+
+      const ttsUsage = await Usage.findOne({
+        where: {
+          UserId: user.id,
+          type: 'tts_conversion',
+          month: currentMonth
+        }
+      });
+
+      const limits = Usage.getLimits(user.plan);
+
+      res.json({
+        month: currentMonth,
+        plan: user.plan,
+        usage: {
+          scripts: {
+            used: scriptUsage?.count || 0,
+            limit: limits.script_generation,
+            percentage: limits.script_generation === -1 ? 0 : 
+              Math.round(((scriptUsage?.count || 0) / limits.script_generation) * 100)
+          },
+          tts: {
+            used: ttsUsage?.count || 0,
+            limit: limits.tts_conversion,
+            percentage: limits.tts_conversion === -1 ? 0 :
+              Math.round(((ttsUsage?.count || 0) / limits.tts_conversion) * 100)
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Get usage error:', error);
+      res.status(500).json({ message: '@4I-4%2C2#6I-!9%2#C
+I2' });
+    }
+  });
+
+  // Get usage history
+  router.get('/history', authMiddleware, async (req, res) => {
+    try {
+      const { months = 6 } = req.query;
+      const user = req.user;
+      
+      const history = await Usage.findAll({
+        where: {
+          UserId: user.id
+        },
+        order: [['month', 'DESC']],
+        limit: months * 2
+      });
+
+      // Group by month
+      const groupedHistory = {};
+      history.forEach(record => {
+        if (!groupedHistory[record.month]) {
+          groupedHistory[record.month] = {
+            month: record.month,
+            scripts: 0,
+            tts: 0
+          };
+        }
+        if (record.type === 'script_generation') {
+          groupedHistory[record.month].scripts = record.count;
+        } else if (record.type === 'tts_conversion') {
+          groupedHistory[record.month].tts = record.count;
+        }
+      });
+
+      res.json({
+        history: Object.values(groupedHistory)
+      });
+    } catch (error) {
+      console.error('Get usage history error:', error);
+      res.status(500).json({ message: '@4I-4%2C2#6#0'142#C
+I2' });
+    }
+  });
+
+  return router;
+};
