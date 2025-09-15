@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
@@ -12,7 +12,8 @@ import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
 
 // Set axios defaults
-axios.defaults.baseURL = 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+axios.defaults.baseURL = API_URL;
 
 // Add auth interceptor
 axios.interceptors.request.use(
