@@ -6,10 +6,10 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node src/full-featured-app.js",
+    "start": "node src/professional-app.js",
+    "start:full": "node src/full-featured-app.js",
     "start:simple": "node src/simple-app.js",
-    "start:old": "node src/app.js",
-    "dev": "nodemon src/full-featured-app.js",
+    "dev": "nodemon src/professional-app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,6 +17,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/text-to-speech": "^6.3.0",
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
